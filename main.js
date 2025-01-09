@@ -6,93 +6,214 @@ import VectorLayer from 'https://cdn.skypack.dev/ol/layer/Vector.js';
 import VectorSource from 'https://cdn.skypack.dev/ol/source/Vector.js';
 import Feature from 'https://cdn.skypack.dev/ol/Feature.js';
 import Point from 'https://cdn.skypack.dev/ol/geom/Point.js';
-import { fromLonLat, toLonLat } from 'https://cdn.skypack.dev/ol/proj.js';
 import { Icon, Style } from 'https://cdn.skypack.dev/ol/style.js';
-import { showPopup } from './popup.js'; // Mengimpor fungsi showPopup dari popup.js
+import { fromLonLat, toLonLat } from 'https://cdn.skypack.dev/ol/proj.js';
+import * as turf from 'https://cdn.skypack.dev/@turf/turf';
+import Swal from "https://cdn.jsdelivr.net/npm/sweetalert2@11/src/sweetalert2.js";
+import {addCSS} from "https://cdn.jsdelivr.net/gh/jscroot/lib@0.0.9/element.js";
 
-// Sumber data untuk marker
-const markerSource = new VectorSource();
-
-// Layer untuk marker
-const markerLayer = new VectorLayer({
-  source: markerSource,
-});
+addCSS("https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.css");
 
 const map = new Map({
   target: 'map',
   layers: [
-    new TileLayer({ source: new OSM() }),
-    markerLayer,
+    new TileLayer({
+      source: new OSM(),
+    }),
   ],
   view: new View({
-    center: fromLonLat([107.9019822944495, -7.215907720160664]),
-    zoom: 12,
+    center: fromLonLat([107.54249456754211, -6.884723248778016]),
+    zoom: 8,
   }),
 });
 
-const savedLocations = [];
-let currentCoordinate = null;
+const markerSource = new VectorSource();
+const markerLayer = new VectorLayer({
+  source: markerSource,
+});
+map.addLayer(markerLayer);
 
-// Tambahkan event listener untuk klik pada peta
-map.on('click', async (event) => {
-  currentCoordinate = event.coordinate;
-  const lonLat = toLonLat(currentCoordinate);
+const popup = document.getElementById('popup');
+const descriptionInput = document.getElementById('marker-description');
+const addMarkerButton = document.getElementById('add-marker');
+const cancelButton = document.getElementById('cancel');
+let selectedCoordinates = null;
 
-  // Ambil nama lokasi menggunakan API reverse geocoding
-  const locationName = await getLocationName(lonLat[1], lonLat[0]);
+map.on('click', (event) => {
+  const coordinates = toLonLat(event.coordinate);
+  const longitude = coordinates[0].toFixed(6);
+  const latitude = coordinates[1].toFixed(6);
 
-  // Tambahkan marker pada lokasi yang diklik
-  addMarker(currentCoordinate, locationName);
+  selectedCoordinates = event.coordinate;
 
-  // Tampilkan popup dengan informasi lokasi
-  const message = `Longitude: ${lonLat[0].toFixed(6)}, Latitude: ${lonLat[1].toFixed(6)}\nLocation: ${locationName}`;
-  showPopup('Location Information', message);
-
-  // Simpan lokasi
-  savedLocations.push({
-    longitude: lonLat[0].toFixed(6),
-    latitude: lonLat[1].toFixed(6),
-    description: locationName,
-  });
-  updateLocationList();
+  popup.querySelector('h3').textContent = `Masukkan Lokasi:
+Longitude: ${longitude}
+Latitude: ${latitude}`;
+  popup.classList.remove('hidden');
 });
 
-// Fungsi untuk mendapatkan nama lokasi menggunakan API reverse geocoding
-async function getLocationName(lat, lon) {
-  const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`;
-  try {
-    const response = await fetch(url);
-    const data = await response.json();
-    return data.display_name || 'Location not found';
-  } catch (error) {
-    console.error('Error fetching location name:', error);
-    return 'Location not found';
+addMarkerButton.addEventListener('click', () => {
+  const description = descriptionInput.value.trim();
+  if (description && selectedCoordinates) {
+    const marker = new Feature({
+      geometry: new Point(selectedCoordinates),
+      description: description,
+      longitude: toLonLat(selectedCoordinates)[0].toFixed(6),
+      latitude: toLonLat(selectedCoordinates)[1].toFixed(6),
+    });
+
+    marker.setStyle(
+      new Style({
+        image: new Icon({
+          src: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
+          scale: 0.05,
+        }),
+      })
+    );
+
+    markerSource.addFeature(marker);
+    popup.classList.add('hidden');
+    descriptionInput.value = '';
+  }
+});
+
+cancelButton.addEventListener('click', () => {
+  popup.classList.add('hidden');
+  descriptionInput.value = '';
+});
+
+map.on('click', (event) => {
+  map.forEachFeatureAtPixel(event.pixel, (feature) => {
+    const description = feature.get('description');
+    const longitude = feature.get('longitude');
+    const latitude = feature.get('latitude');
+    if (description) {
+      const infoPopup = document.createElement('div');
+      infoPopup.className = 'popup';
+      infoPopup.innerHTML = `
+        <div class="popup-content">
+          <h3>Informasi Marker:</h3>
+          <p><strong>Deskripsi:</strong> ${description}</p>
+          <p><strong>Longitude:</strong> ${longitude}</p>
+          <p><strong>Latitude:</strong> ${latitude}</p>
+          <button id="close-info">Tutup</button>
+        </div>
+      `;
+      document.body.appendChild(infoPopup);
+
+      infoPopup.querySelector('#close-info').addEventListener('click', () => {
+        infoPopup.remove();
+      });
+    }
+  });
+});
+
+function addUserLocationMarker() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const userCoordinates = [
+          position.coords.longitude,
+          position.coords.latitude,
+        ];
+        console.log("Koordinat pengguna berhasil diperoleh:", userCoordinates);
+
+        const userMarker = new Feature({
+          geometry: new Point(fromLonLat(userCoordinates)),
+        });
+
+        userMarker.setStyle(
+          new Style({
+            image: new Icon({
+              src: 'https://cdn-icons-png.flaticon.com/512/64/64113.png', // Ikon untuk pengguna
+              scale: 0.05,
+              anchor: [0.5, 1],
+            }),
+          })
+        );
+
+        // Tambahkan marker ke layer peta
+        const userLayer = new VectorLayer({
+          source: new VectorSource({
+            features: [userMarker],
+          }),
+        });
+
+        map.addLayer(userLayer);
+
+        map.getView().animate({
+          center: fromLonLat(userCoordinates),
+          zoom: 16,
+        });
+
+        // Cari lokasi parkir terdekat
+        const nearestLocation = findNearestLocation(userCoordinates, parkingLocations);
+        if (nearestLocation) {
+          const nearestMarker = new Feature({
+            geometry: new Point(fromLonLat(nearestLocation.coordinates)),
+            description: nearestLocation.name,
+          });
+
+          nearestMarker.setStyle(
+            new Style({
+              image: new Icon({
+                src: 'https://cdn-icons-png.flaticon.com/512/854/854878.png', // Ikon untuk lokasi terdekat
+                scale: 0.05,
+              }),
+            })
+          );
+
+          markerSource.addFeature(nearestMarker);
+
+          // Menampilkan notifikasi lokasi terdekat
+          Swal.fire({
+            title: "Lokasi Terdekat Mu",
+            text: `Lokasi terdekat adalah ${nearestLocation.name}.`,
+            icon: "info",
+          });
+        }
+      },
+      (error) => {
+        console.error("Gagal mendapatkan lokasi pengguna:", error.message);
+        Swal.fire({
+          title: "Lokasi tidak tersedia",
+          text: "Pastikan fitur lokasi di perangkat Anda aktif.",
+          icon: "error",
+        });
+      }
+    );
+  } else {
+    Swal.fire({
+      title: "Geolokasi tidak didukung",
+      text: "Perangkat Anda tidak mendukung geolokasi.",
+      icon: "warning",
+    });
   }
 }
 
-// Fungsi untuk menambahkan marker pada peta
-function addMarker(coordinate, description) {
-  const marker = new Feature({
-    geometry: new Point(coordinate),
+// Lokasi parkir
+const parkingLocations = [
+  { name: "Baker's Delight", coordinates: [107.580642, -6.883722] },
+  { name: "Holland Bakery", coordinates: [107.579529, -6.882788] },
+];
+
+function findNearestLocation(userCoordinates, locations) {
+  let nearest = null;
+  let minDistance = Infinity;
+
+  locations.forEach((location) => {
+    const distance = turf.distance(
+      turf.point(userCoordinates),
+      turf.point(location.coordinates)
+    );
+
+    if (distance < minDistance) {
+      minDistance = distance;
+      nearest = location;
+    }
   });
-  marker.setStyle(
-    new Style({
-      image: new Icon({
-        src: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
-        scale: 0.05,
-      }),
-    })
-  );
-  markerSource.addFeature(marker);
+
+  return nearest;
 }
 
-// Update daftar lokasi
-function updateLocationList() {
-  const locationList = document.getElementById('location-list');
-  locationList.innerHTML = '';
-  savedLocations.forEach((location, index) => {
-    const li = document.createElement('li');
-    li.textContent = `Location ${index + 1}: Longitude ${location.longitude}, Latitude ${location.latitude}, Description: ${location.description}`;
-    locationList.appendChild(li);
-  });
-}
+addUserLocationMarker();
