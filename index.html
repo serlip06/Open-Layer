@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive Map</title>
+  
+  <!-- OpenLayers CSS -->
+  <link href="https://cdn.skypack.dev/ol/ol.css" rel="stylesheet">
+  
+  <!-- Main JS and Popup JS -->
+  <script type="module" src="main.js"></script>
+  <script type="module" src="popup.js"></script>
+
+  <style>
+/* General Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Arial', sans-serif;
+  background-color: #907152;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+/* Container for the map and locations */
+.container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  gap: 30px;
+}
+
+/* Map */
+#map {
+  width: 70%;
+  height: 60vh;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  background-color: #e5e5e5;
+}
+
+/* Locations List */
+#locations {
+  width: 28%;
+  background-color: #ffffff;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+  height: 60vh;
+  overflow-y: auto;
+}
+
+h3 {
+  font-size: 1.8em;
+  color: #333;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+#location-list {
+  list-style: none;
+  padding: 0;
+}
+
+#location-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px;
+  background-color: #fafafa;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.3s, transform 0.3s;
+}
+
+#location-list li:hover {
+  background-color: #f1f1f1;
+  transform: translateX(5px);
+}
+
+.location-info {
+  flex: 1;
+  font-size: 1em;
+  color: #907152;
+}
+
+.location-remove {
+  font-size: 1.2em;
+  color: #e74c3c;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.location-remove:hover {
+  color: #c0392b;
+}
+
+.popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7); /* Darker background */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s, transform 0.3s;
+}
+
+.popup.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1); /* Slight scaling effect */
+}
+
+.popup-content {
+  background: linear-gradient(135deg, #6a82fb, #fc5c7d); /* Gradient background */
+  padding: 30px;
+  border-radius: 15px;
+  text-align: center;
+  width: 350px;
+  max-width: 90%;
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+  animation: popupAnimation 0.5s ease-out;
+}
+
+@keyframes popupAnimation {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.popup-content h3 {
+  font-size: 1.6em;
+  color: white;
+  margin-bottom: 20px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.popup-content p {
+  font-size: 1.1em;
+  color: #f7f7f7;
+  margin-bottom: 15px;
+  line-height: 1.5;
+}
+
+textarea {
+  width: 100%;
+  height: 70px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  resize: none;
+  font-size: 14px;
+  margin-bottom: 15px;
+  background-color: #f7f7f7;
+}
+
+/* Close Button */
+.close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: transparent;
+  color: white;
+  font-size: 1.5em;
+  border: none;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.close-button:hover {
+  color: #fc5c7d;
+}
+
+
+button {
+  padding: 12px 20px;
+  margin: 8px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+#save-location {
+  background-color: #69acef;
+  color: white;
+}
+
+#cancel-location {
+  background-color: #e74c3c;
+  color: white;
+}
+
+button:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #map {
+    width: 100%;
+    height: 50vh;
+  }
+
+  #locations {
+    width: 100%;
+    margin-top: 20px;
+  }
+
+  .popup-content {
+    width: 90%;
+  }
+}
+
+  </style>
+</head>
+<body>
+    <h1>Layer Map</h1>
+  <div class="container">
+    <div id="map"></div>
+    <div id="locations">
+      <h3>Save Location</h3>
+      <ul id="location-list"></ul>
+    </div>
+  </div>
+
+  <!-- Popup for saving location -->
+  <div id="input-popup" class="popup">
+    <div class="popup-content">
+      <button id="close-popup" class="close-button">X</button>
+      <h3>Save Location</h3>
+      <p id="popup-coordinates"></p>
+      <!-- <textarea id="location-description" placeholder="Enter description here..."></textarea> -->
+      <!-- <button id="save-location">Save</button>
+      <button id="cancel-location">Cancel</button> -->
+    </div>
+  </div>
+</body>
+</html>
