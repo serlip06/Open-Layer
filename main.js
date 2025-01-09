@@ -167,8 +167,8 @@ function addUserLocationMarker() {
 
           // Menampilkan notifikasi lokasi terdekat
           Swal.fire({
-            title: "Lokasi Terdekat Mu",
-            text: `Lokasi terdekat adalah ${nearestLocation.name}.`,
+            title: "Lokasi Terdekat Baker's Delight",
+            text: `Lokasi terdekat  ${nearestLocation.name}.`,
             icon: "info",
           });
         }
@@ -193,7 +193,7 @@ function addUserLocationMarker() {
 
 // Lokasi parkir
 const parkingLocations = [
-  { name: "Baker's Delight", coordinates: [107.580642, -6.883722] },
+  { name: "Dimana Anda Berada", coordinates: [107.580642, -6.883722] },
   { name: "Holland Bakery", coordinates: [107.579529, -6.882788] },
 ];
 
